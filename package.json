@@ -1,0 +1,28 @@
+{
+  "name": "synergy-lol-api",
+  "version": "1.0.0",
+  "description": "LoL API NodeJS wrapper designed for distributed computation ",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "synergy-lol-api"
+  },
+  "keywords": [
+    "lol",
+    "synergy",
+    "api",
+    "wrapper",
+    "distributed"
+  ],
+  "author": "A A Karim",
+  "license": "MIT",
+  "dependencies": {
+    "async": "^1.5.2",
+    "bluebird": "^3.3.4",
+    "redis": "^2.5.0-1",
+    "request-promise": "^2.0.1"
+  }
+}

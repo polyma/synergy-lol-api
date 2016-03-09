@@ -1,0 +1,7 @@
+#Syner.gg LoL API Wrapper
+
+This is a LoL API wrapper that is designed to be used in distributed calculations.
+
+That just means it uses a distributed cache, nothing fancy.
+
+I wouldn't use this yet - at the moment it's very idiosyncratic to the syner.gg backend. 
