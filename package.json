@@ -1,6 +1,6 @@
 {
   "name": "synergy-lol-api",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "LoL API NodeJS wrapper designed for distributed computation ",
   "main": "index.js",
   "scripts": {
@@ -24,5 +24,9 @@
     "bluebird": "^3.3.4",
     "redis": "^2.5.0-1",
     "request-promise": "^2.0.1"
+  },
+  "devDependencies": {
+    "tape": "^4.5.1",
+    "dotenv": "^2.0.0"
   }
 }
