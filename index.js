@@ -196,7 +196,7 @@ var LoLAPI = {
             .then((tenSeconds)=> {
               this.requestCount.outstandingRequests += 1;
               var options = {
-                uri: endpoint + '&api_key=' + this.apiKey, //Assume the ? has already been added by our endpoint
+                uri: encodeURI(endpoint + '&api_key=' + this.apiKey), //Assume the ? has already been added by our endpoint
                 json: true,
                 resolveWithFullResponse: true
               }
