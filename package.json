@@ -1,6 +1,6 @@
 {
   "name": "synergy-lol-api",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "LoL API NodeJS wrapper designed for distributed computation ",
   "main": "index.js",
   "scripts": {
