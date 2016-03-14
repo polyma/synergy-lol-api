@@ -22,6 +22,7 @@ var LoLAPI = {
     /*
       END CACHE SETUP
     */
+
     /*
       SET UP LOGGER
     */
@@ -86,20 +87,20 @@ var LoLAPI = {
     return this.cache.multi().incr('lolapi_tenseconds').expire('lolapi_tenseconds', 11).execAsync()
     .then((value)=> {
       if(!value) {
-        return console.log('CouldnT SET SECOND KEY');
+        return this.logger("Couldn't set the 10 second rate key");
       }
       return value;
-    });
+    }).bind(this);
   },
   incrementOneHourCount: function() {
     //If not set then set
     return this.cache.multi().incr('lolapi_onehour').expire('lolapi_onehour', 3601).execAsync()
     .then((value)=> {
       if(!value) {
-        return console.log('CouldnT SET HOUR KEY');
+        return this.logger("Couldn't set one hour key.");
       }
       return value;
-    });
+    }).bind(this);
   },
   getTenSecondsCount: function() {
     return this.cache.getAsync('lolapi_tenseconds')
@@ -146,25 +147,6 @@ var LoLAPI = {
     //Clear interval and reset after retry after is cleared
     clearInterval(this.tenSecondsTimeout);
     console.log(this.tenSecondsTimeout);
-    // setTimeout(()=> {
-    //   //NOTE: Do NOT exec queue here as this is likely to get called many times if there are multiple failures
-    //   this.tenSecondsTimeout = setInterval(function() {
-    //     this.bPaused = false;
-    //     this.requestCount.tenSeconds = 0;
-    //     this.execQueue();
-    //   }.bind(this),11000);
-    // }.bind(this), r);
-    // if(r > 3600000) {
-    //   //Clear interval and reset after retry after is cleared
-    //   clearInterval(this.oneHourTimeout);
-    //   setTimeout(()=> {
-    //     this.oneHourTimeout = setInterval(function() {
-    //       this.bPaused = false;
-    //       this.requestCount.tenSeconds = 0;
-    //       this.execQueue();
-    //     }.bind(this),3601000);
-    //   }.bind(this), r);
-    // }
   },
   checkRateLimit: function() {
     return this.getOneHourCount() //Get this first because we care about it less
