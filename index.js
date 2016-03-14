@@ -244,6 +244,10 @@ var LoLAPI = {
                       console.log(reason.response['headers']);
                     }
                   }
+                  if(reason.statusCode === 404) {
+                    this.errorHandle('Request ' + endpoint + ' REJECTED with reason: ' + reason + '. NOT adding back to queue');
+                    return;
+                  }
                   if(typeof times_failed !== 'number') {
                     times_failed = 1;
                   }
