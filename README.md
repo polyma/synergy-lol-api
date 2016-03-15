@@ -1,6 +1,6 @@
 ##Syner.gg LoL API Wrapper
 
-This is a LoL API wrapper written in NodeJS that is designed to be used in distributed calculations. We are using it at Syner.gg to make sure that we don't exceed our rate limit while using our cluster computing algorithms.
+This is a LoL API wrapper written in NodeJS that is designed to be used in distributed calculations. We are using it at syner.gg to make sure that we don't exceed our rate limit whilst using our cluster computing algorithms.
 
 That just means it uses a distributed Redis cache, nothing fancy.
 
@@ -14,7 +14,7 @@ I wouldn't use this in production yet - at the moment it's very idiosyncratic to
 
 ## Installation ##
 
-    npm install synergy-lol-api
+  npm install synergy-lol-api
 
 ## Usage ##
 In your nodeJS script call
