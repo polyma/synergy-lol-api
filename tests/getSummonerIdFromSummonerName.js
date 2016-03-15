@@ -1,7 +1,7 @@
 var LoLAPI = require('./');
 
 LoLAPI.request.getSummonerIdFromSummonerName({
-  summonerName: 'mcdilly',
+  summonerName: 'NiP Bjergsen',
   realm: 'euw'
 })
 .then((res)=> {

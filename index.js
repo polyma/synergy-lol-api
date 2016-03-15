@@ -218,7 +218,7 @@ var LoLAPI = {
                           tmp[item] = response.body[item];
                         }
                         else {
-                          this.errorHandle("Couldn't locate the requested var");
+                          this.infoHandle("Couldn't locate the requested var");
                         }
                       }.bind(this));
                       return tmp;  //Resolve promise
@@ -245,8 +245,8 @@ var LoLAPI = {
                     }
                   }
                   if(reason.statusCode === 404) {
-                    this.errorHandle('Request ' + endpoint + ' REJECTED with reason: ' + reason + '. NOT adding back to queue');
-                    return;
+                    //Throws out of promise
+                    return this.notFoundHandle('Request ' + endpoint + ' REJECTED with reason: ' + reason + '. NOT adding back to queue');
                   }
                   if(typeof times_failed !== 'number') {
                     times_failed = 1;
@@ -254,7 +254,7 @@ var LoLAPI = {
                   else {
                     times_failed++;
                   }
-                  this.errorHandle('Request ' + endpoint + ' REJECTED with reason: ' + reason + '. Adding back to queue. Failed ' + times_failed + ' times.');
+                  this.infoHandle('Request ' + endpoint + ' REJECTED with reason: ' + reason + '. Adding back to queue. Failed ' + times_failed + ' times.');
                   return this.addToQueue(cb.bind(this, endpoint, returnVars, times_failed), times_failed, endpoint);
                 }.bind(this));
             }); //NOTE: I'm not sure why we can't bind here but if we do it causes times_failed to not increment
@@ -262,9 +262,17 @@ var LoLAPI = {
     }
     return this.addToQueue(cb.bind(this, endpoint, returnVars), 0, endpoint);
   },
+  infoHandle: function(str) {
+    throw str;
+  },
+  notFoundHandle: function(str) {
+    console.log(str);
+    throw str;
+  },
   addToQueue: function(fn, times_failed, endpoint) {
-    if(times_failed > this.failCount) {
-      return this.errorHandle('Request from endpoint "' + endpoint + '" exceeded fail count!');
+    if(times_failed >= this.failCount) {
+      this.info('Request from endpoint "' + endpoint + '" exceeded fail count!');
+      throw 'Request from endpoint "' + endpoint + '" exceeded fail count!';
     }
     else {
       //Turns function to deferred promise and adds to queue.
