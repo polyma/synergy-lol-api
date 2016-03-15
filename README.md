@@ -14,17 +14,17 @@ I wouldn't use this in production yet - at the moment it's very idiosyncratic to
 
 ## Installation ##
 
-  npm install synergy-lol-api
+    npm install synergy-lol-api
 
 ## Usage ##
 In your nodeJS script call
 
-  var LoLAPI = require('synergy-lol-api').init({
-		cache: cache, //TODO: insert redis cache here
-		api_key: api_key, //TODO: insert api key here
-	    limit_ten_seconds: 10,
-	    limit_one_hour: 500
-	})
+    var LoLAPI = require('synergy-lol-api').init({
+  		cache: cache, //TODO: insert redis cache here
+  		api_key: api_key, //TODO: insert api key here
+  	    limit_ten_seconds: 10,
+  	    limit_one_hour: 500
+  	})
 
 Then use as follows:
 
