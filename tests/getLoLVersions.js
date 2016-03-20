@@ -1,8 +1,13 @@
-var LoLAPI = require('./');
+var LoLAPI = require('./customCache');
+var test = require('tape');
 
-LoLAPI.request.getLoLVersions({
-  realm: 'euw',
-})
-.then((res)=> {
-  console.log('Final result ' + res[0]);
+test('LoL Versions', function(t) {
+  LoLAPI.request.getLoLVersions({
+    realm: 'euw',
+  })
+  .then((res)=> {
+    t.ok(res);
+    console.log('Final versions result ' + res[0]);
+    t.end();
+  });
 });

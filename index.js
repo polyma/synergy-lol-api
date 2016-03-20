@@ -2,11 +2,6 @@ var async = require('async');
 var rp = require('request-promise');
 var Promise = require('bluebird');
 
-//SET UP CACHE
-var redis = require('redis');
-Promise.promisifyAll(redis.RedisClient.prototype);
-Promise.promisifyAll(redis.Multi.prototype);
-
 /*
   LoL API object that deals with everything.
 */
@@ -15,10 +10,21 @@ var LoLAPI = {
     /*
       SET UP CACHE TODO: replace with CHECK that global redis exists
     */
-    this.cache = inputObj.cache;
-    this.cache.on("error", function (err) {
-      this.errorHandle(err);
-    }.bind(this));
+    if(!inputObj.cache) {
+      var redis = require('redis');
+      Promise.promisifyAll(redis.RedisClient.prototype);
+      Promise.promisifyAll(redis.Multi.prototype);
+      this.cache = redis.createClient('redis://' + inputObj.cacheServer + ':' + (inputObj.cachePort || '6379'));
+      this.cache.on('connect', function() {
+        console.log('Connected to Redis');
+      }.bind(this));
+    }
+    else {
+      this.cache = inputObj.cache;
+      this.cache.on("error", function (err) {
+        this.errorHandle(err);
+      }.bind(this));
+    }
     /*
       END CACHE SETUP
     */
@@ -57,6 +63,14 @@ var LoLAPI = {
       if (file.match(/\.js$/) !== null && file !== 'index.js') {
         var r = require('./lib/handlers/' + file);
         this.request[r.name] = r.handler.bind(this);
+      }
+    }.bind(this));
+    //Load all the helpers in the helpers dir.
+    this.helper = {};
+    require('fs').readdirSync(__dirname + '/lib/helpers').forEach(function(file) {
+      if (file.match(/\.js$/) !== null && file !== 'index.js') {
+        var r = require('./lib/helpers/' + file);
+        this.helper[file.replace(/\.js$/, '')] = r;
       }
     }.bind(this));
     //TODO: do we definitely want -1?
@@ -308,6 +322,7 @@ var LoLAPI = {
   },
   queue: [],
   request: {}, //contains all the handlers. Created in the INIT function above.
+  helper: {}, // All the helpers
   replaceEndpointVariables: function(realm, endpoint, platform) { //Replaces $r and $p with platform and realm
     //Realm matches $r
     endpoint = endpoint.replace(/\$r/g, realm);
