@@ -4,7 +4,8 @@
   "description": "LoL API NodeJS wrapper designed for distributed computation.",
   "main": "index.js",
   "scripts": {
-    "test": "node tests/index.js"
+    "test": "node tests/index.js",
+    "coverage": "nyc node tests/index.js && nyc report --reporter=text-lcov | coveralls"
   },
   "repository": {
     "type": "git",
@@ -35,7 +36,9 @@
     "redis": "^2.5.0-1"
   },
   "devDependencies": {
+    "coveralls": "^2.11.8",
     "dotenv": "^2.0.0",
+    "nyc": "^6.1.1",
     "redis": "^2.4.2",
     "tape": "^4.5.1"
   }
