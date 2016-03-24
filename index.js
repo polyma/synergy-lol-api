@@ -8,6 +8,32 @@ var Promise = require('bluebird');
 var LoLAPI = {
   init: function(inputObj) {
     /*
+    SET UP LOGGER
+    */
+    if(typeof inputObj.logger !== 'undefined') {
+      this.logger = inputObj.logger;
+    }
+    else {
+      this.logger = console;
+    }
+    /*
+    END SET UP LOGGER
+    */
+
+    /*
+    SET UP ERROR HANDLER
+    */
+    if(typeof inputObj.errorHandler !== 'undefined') {
+      this.errorHandler = inputObj.errorHandler;
+    }
+    else {
+      this.errorHandler = this.logger.error;
+    }
+    /*
+    END ERROR HANDLER
+    */
+
+    /*
       SET UP CACHE TODO: replace with CHECK that global redis exists
     */
     if(!inputObj.cache) {
@@ -15,9 +41,6 @@ var LoLAPI = {
       Promise.promisifyAll(redis.RedisClient.prototype);
       Promise.promisifyAll(redis.Multi.prototype);
       this.cache = redis.createClient('redis://' + inputObj.cacheServer + ':' + (inputObj.cachePort || '6379'));
-      this.cache.on('connect', function() {
-        console.log('Connected to Redis');
-      }.bind(this));
     }
     else {
       this.cache = inputObj.cache;
@@ -25,34 +48,18 @@ var LoLAPI = {
         this.errorHandle(err);
       }.bind(this));
     }
+    this.cache.on('connect', function() {
+      this.logger.log('LoL API Connected to Redis');
+      this.getOneHourCount().then(count => {
+        this.logger.log(inputObj.limit_one_hour - count + ' API requests available in the hour.');
+        return this.cache.ttlAsync('lolapi_onehour');
+      })
+      .then(ttl => {
+        this.logger.log(ttl + ' seconds left until hour cache expiry');
+      });
+    }.bind(this));
     /*
       END CACHE SETUP
-    */
-
-    /*
-      SET UP LOGGER
-    */
-    if(typeof inputObj.logger !== 'undefined') {
-      this.logger = inputObj.logger;
-    }
-    else {
-      this.logger = console.log;
-    }
-    /*
-      END SET UP LOGGER
-    */
-
-    /*
-      SET UP ERROR HANDLER
-    */
-    if(typeof inputObj.errorHandler !== 'undefined') {
-      this.errorHandler = inputObj.errorHandler;
-    }
-    else {
-      this.errorHandler = console.log;
-    }
-    /*
-      END ERROR HANDLER
     */
 
 
@@ -87,7 +94,7 @@ var LoLAPI = {
           }
         }).bind(this);
     }.bind(this), 10);
-    console.log('Created LoL API Request Handler');
+    this.logger.log('Created LoL API Request Handler');
     return this;
   },
   setApiKey: function(key) {
@@ -160,7 +167,7 @@ var LoLAPI = {
     //Always clear the 10s timeout just to be certain.
     //Clear interval and reset after retry after is cleared
     clearInterval(this.tenSecondsTimeout);
-    console.log(this.tenSecondsTimeout);
+    this.logger.log(this.tenSecondsTimeout);
   },
   checkRateLimit: function() {
     return this.getOneHourCount() //Get this first because we care about it less
@@ -172,7 +179,7 @@ var LoLAPI = {
             return 0;
           }
           else if((parseInt(oneHour) + this.requestCount.outstandingRequests) >= this.rateLimit.oneHour) {
-            console.log('Hit hour limit: ' + oneHour);
+            this.logger.log('Hit hour limit: ' + oneHour);
             return 0;
           }
           else {
@@ -214,9 +221,9 @@ var LoLAPI = {
                 json: true,
                 resolveWithFullResponse: true
               }
-              console.log('Using ' + options.uri);
-              console.log(this.requestCount.outstandingRequests);
-              console.log(tenSeconds + ' ' + oneHour);
+              this.logger.log('Using ' + options.uri);
+              this.logger.log(this.requestCount.outstandingRequests);
+              this.logger.log(tenSeconds + ' ' + oneHour);
               return rp(options)
               .then(
                 function(response) {
@@ -239,7 +246,7 @@ var LoLAPI = {
                     }
                   }
                   else {
-                    console.log('SUCCESSFUL RESPONSE FROM: ' + endpoint);
+                    this.logger.log('SUCCESSFUL RESPONSE FROM: ' + endpoint);
                     return response.body; //Resolve promise
                   }
                 }.bind(this),
@@ -247,19 +254,22 @@ var LoLAPI = {
                 function(reason) {
                   this.requestCount.outstandingRequests -= 1;
                   if(reason.statusCode === 429) {
-                    console.log('Rate limit reached!')
+                    this.logger.log('Rate limit reached!')
                     //NOTE: Riot have been known to remove the header so including this to avoid breaking.
                     if(typeof reason.response['headers']['retry-after'] !== 'undefined') {
-                      console.log('Retrying after ' + reason.response['headers']['retry-after'] + 's');
+                      this.logger.log('Retrying after ' + reason.response['headers']['retry-after'] + 's');
                       // this.retryRateLimitOverride(reason.response['headers']['retry-after']);
                     }
                     else {
-                      console.log('No Retry-After header');
-                      console.log(reason.response['headers']);
+                      this.logger.log('No Retry-After header');
+                      this.logger.log(reason.response['headers']);
                     }
                   }
+                  if(reason.error.code == 'ENOTFOUND') {
+                    throw 'Request ' + endpoint + ' did not access a valid endpoint, please check the parameter structure of your request realm and/or platform names. NOT adding back to queue.';
+                  }
                   if(reason.statusCode === 404) {
-                    //Throws out of promise
+                    //404 isn't an error per se, so we don't throw this.
                     return this.notFoundHandle('Request ' + endpoint + ' REJECTED with reason: ' + reason + '. NOT adding back to queue');
                   }
                   if(typeof times_failed !== 'number') {
@@ -270,18 +280,20 @@ var LoLAPI = {
                   }
                   this.infoHandle('Request ' + endpoint + ' REJECTED with reason: ' + reason + '. Adding back to queue. Failed ' + times_failed + ' times.');
                   return this.addToQueue(cb.bind(this, endpoint, returnVars, times_failed), times_failed, endpoint);
-                }.bind(this));
+                }.bind(this))
+                .catch(err => {
+                  return this.errorHandle(err);
+                });
             }); //NOTE: I'm not sure why we can't bind here but if we do it causes times_failed to not increment
         });
     }
     return this.addToQueue(cb.bind(this, endpoint, returnVars), 0, endpoint);
   },
   infoHandle: function(str) {
-    throw str;
+    return this.logger.info(str);
   },
   notFoundHandle: function(str) {
-    console.log(str);
-    throw str;
+    return this.logger.info(str);
   },
   addToQueue: function(fn, times_failed, endpoint) {
     if(times_failed >= this.failCount) {
@@ -290,16 +302,16 @@ var LoLAPI = {
     }
     else {
       //Turns function to deferred promise and adds to queue.
-      console.log('Adding ' + endpoint + ' to queue.');
+      this.logger.log('Adding ' + endpoint + ' to queue.');
       var resolve, reject;
       var promise = new Promise(function(reso, reje) {
         resolve = reso;
         reject = reje;
       })
       .then(function(times_failed) {
-        console.log('Executing queue item!');
+        this.logger.log('Executing queue item!');
         return fn(); //NOTE: fn is prebound with arguments
-      });
+      }.bind(this));
       this.queue.push({
         resolve: resolve,
         reject: reject,
@@ -309,14 +321,17 @@ var LoLAPI = {
     }
   },
   execQueue: function(end_index) {
-    while(this.queue.length > 0 && end_index > 0) {
+    while(this.queue.length > 0 && end_index > 0 && this.cache.connected === true) {
       bUnloaded = true;
       var w = this.queue.shift();
       w.resolve();
       end_index--;
     }
+    if(this.cache.connected === false) {
+      this.logger.log('Attempted to execute queue but cache disconnected');
+    }
     if(bUnloaded) {
-      console.log(this.queue.length + ' in queue after unloading.');
+      this.logger.log(this.queue.length + ' in queue after unloading.');
     }
     return;
   },
@@ -332,7 +347,7 @@ var LoLAPI = {
     return endpoint;
   },
   errorHandle: function(str) {
-    this.errorHandler(str);
+    return this.errorHandler(str);
   }
 }
 
