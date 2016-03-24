@@ -2,3 +2,4 @@
 .env
 npm-debug.log
 .coveralls.yml
+/.nyc_output

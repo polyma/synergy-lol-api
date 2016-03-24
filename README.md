@@ -47,6 +47,14 @@ Things to bear in mind:
  3. This project was initially solely for syner.gg purposes and we only use a handful of endpoints (in our calculations, at least), so you may find it lacking. However, **adding an endpoint handler is very very simple**. They are stored under /lib/handlers. Just add a new file, naming it according to the method name and copy the url convention used in the other handlers, if you're having any problems then just raise an issue on GitHub.
 
 ## Changelog ##
+### [1.0.10] - 2016-03-25 ###
+#### Added ####
+
+- support for input as 'realm' or 'region', they are now interchangeable.
+- witholds queue execution if cache server is disconnected.
+- added output of how many requests are left in the hour (useful for developing crawlers).
+- much better results handling for 404 errors and address not found errors.
+
 ### [1.0.9] - 2016-03-23 ###
 #### Added ####
 
