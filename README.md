@@ -41,6 +41,7 @@ Then use as follows:
 ## Logging ##
 
 Logging is supported out of the box, simply pass in your transport like so:
+
     var winston = require('winston');
     require('winston-loggly');
     winston.add(winston.transports.Loggly, options);
