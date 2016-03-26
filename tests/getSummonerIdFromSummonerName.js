@@ -1,4 +1,4 @@
-var LoLAPI = require('./customCache');
+var LoLAPI = require('./obj/testCache.js');
 var test = require('tape');
 
 var summoner_id = 'NiP Bjergsen';
@@ -6,7 +6,7 @@ var summoner_id = 'NiP Bjergsen';
 test('Summoner ID from Summoner Name', function(t) {
   LoLAPI.request.getSummonerIdFromSummonerName({
     summonerName: summoner_id,
-    realm: 'euw'
+    realm: 'euw',
   })
   .then((res)=> {
     t.ok(res, 'Result present');
@@ -14,7 +14,6 @@ test('Summoner ID from Summoner Name', function(t) {
     t.ok(res[r], 'Correct summoner id as a key');
     t.equal(res[r].name, 'NiP Bjergsen');
     t.equal(res[r].id, 19442683);
-    console.log('Final result ' + Object.keys(res));
     t.end();
   });
 });

@@ -16,6 +16,7 @@ var LoLAPI = require('../index')
 test('inbuilt cache', function(t) {
   t.notEqual(typeof LoLAPI.cache, 'undefined');
   t.equal(LoLAPI.cache.connected, true);
+  clearInterval(LoLAPI.queueInterval);
   t.end();
 });
 

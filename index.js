@@ -52,7 +52,7 @@ var LoLAPI = {
       this.logger.log('LoL API Connected to Redis');
       this.getOneHourCount().then(count => {
         this.logger.log(inputObj.limit_one_hour - count + ' API requests available in the hour.');
-        return this.cache.ttlAsync('lolapi_onehour');
+        return this.timeToHourExpiry();
       })
       .then(ttl => {
         this.logger.log(ttl + ' seconds left until hour cache expiry');
@@ -80,9 +80,23 @@ var LoLAPI = {
         this.helper[file.replace(/\.js$/, '')] = r;
       }
     }.bind(this));
+
+    //Load all the route builders in the route builders dir.
+    this.routeStem = {};
+    require('fs').readdirSync(__dirname + '/lib/route-stem').forEach(function(file) {
+      if (file.match(/\.js$/) !== null && file !== 'index.js') {
+        var r = require('./lib/route-stem/' + file);
+        this.routeStem[file.replace(/\.js$/, '')] = r;
+      }
+    }.bind(this));
+
     //TODO: do we definitely want -1?
     this.setRateLimit(inputObj.limit_ten_seconds-1, inputObj.limit_one_hour);
     //Set the timeouts for the queue master
+    this.beginQueueInterval();
+    return this;
+  },
+  beginQueueInterval: function() {
     this.queueInterval = setInterval(function() {
       return this.checkRateLimit()
         .then((spaces)=> {
@@ -95,10 +109,13 @@ var LoLAPI = {
         }).bind(this);
     }.bind(this), 10);
     this.logger.log('Created LoL API Request Handler');
-    return this;
+    return;
   },
   setApiKey: function(key) {
     return this.apiKey = key;
+  },
+  timeToHourExpiry: function() {
+    return this.cache.ttlAsync('lolapi_onehour');
   },
   refreshCache: function() {
     return this.cache.delAsync('lolapi_tenseconds', 'lolapi_onehour');
@@ -179,8 +196,11 @@ var LoLAPI = {
             return 0;
           }
           else if((parseInt(oneHour) + this.requestCount.outstandingRequests) >= this.rateLimit.oneHour) {
-            this.logger.log('Hit hour limit: ' + oneHour);
-            return 0;
+            return this.timeToHourExpiry()
+            .then(ttl => {
+              this.logger.log('Hit hour limit: ' + oneHour + '. ' + ttl + ' seconds to go until cache reset.');
+              return 0; // 0 Spaces
+            })
           }
           else {
             //return the smaller of the requests available
@@ -230,7 +250,12 @@ var LoLAPI = {
                   this.requestCount.outstandingRequests -= 1;
                   if(returnVars) {
                     if(typeof returnVars === 'string') {
-                      return response.body[returnVars]; //Resolve promise
+                      if(response.body[returnVars]) {
+                        return response.body[returnVars]; //Resolve promise
+                      }
+                      else {
+                        this.infoHandle("Couldn't locate the requested returnVar " + returnVars + '. Returning full response.');
+                      }
                     }
                     else {
                       var tmp = {};
@@ -239,10 +264,16 @@ var LoLAPI = {
                           tmp[item] = response.body[item];
                         }
                         else {
-                          this.infoHandle("Couldn't locate the requested var");
+                          var bFailedReturnVar = true;
                         }
                       }.bind(this));
-                      return tmp;  //Resolve promise
+                      if(!bFailedReturnVar) {
+                        return tmp;  //Resolve promise
+                      }
+                      else {
+                        this.infoHandle("Couldn't locate the requested returnVar " + item + '. Returning full response.');
+                        return response.body; //Resolve Promise
+                      }
                     }
                   }
                   else {
@@ -297,7 +328,7 @@ var LoLAPI = {
   },
   addToQueue: function(fn, times_failed, endpoint) {
     if(times_failed >= this.failCount) {
-      this.info('Request from endpoint "' + endpoint + '" exceeded fail count!');
+      this.infoHandle('Request from endpoint "' + endpoint + '" exceeded fail count!');
       throw 'Request from endpoint "' + endpoint + '" exceeded fail count!';
     }
     else {
@@ -328,7 +359,7 @@ var LoLAPI = {
       end_index--;
     }
     if(this.cache.connected === false) {
-      this.logger.log('Attempted to execute queue but cache disconnected');
+      this.logger.errorHandle('Attempted to execute queue but cache disconnected');
     }
     if(bUnloaded) {
       this.logger.log(this.queue.length + ' in queue after unloading.');
@@ -348,6 +379,22 @@ var LoLAPI = {
   },
   errorHandle: function(str) {
     return this.errorHandler(str);
+  },
+  shutdown: function(now) {
+    return new Promise((resolve, reject) => {
+      this.logger.log('LoL API shutting down...');
+      clearInterval(this.queueInterval);
+      if(now) {
+        this.cache.end(true);
+      }
+      else {
+        this.cache.quit();
+      }
+      this.cache.on('end', function() {
+        this.logger.log('Redis connected severed.');
+        resolve(true);
+      }.bind(this));
+    }).bind(this)
   }
 }
 
