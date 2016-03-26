@@ -1,4 +1,4 @@
-var LoLAPI = require('./customCache');
+var LoLAPI = require('./obj/testCache.js');
 var test = require('tape');
 
 var summoner_id = 'h10hfueh0hhf!1f38hf03uh!';

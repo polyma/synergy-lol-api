@@ -1,4 +1,4 @@
-var LoLAPI = require('./customCache');
+var LoLAPI = require('./obj/testCache.js');
 var Promise = require('bluebird');
 var test = require('tape');
 test('Get single match', function(t) {

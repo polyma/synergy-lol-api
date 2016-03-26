@@ -1,6 +1,5 @@
-var LoLAPI = require('./customCache');
+var LoLAPI = require('./obj/testCache.js');
 var test = require('tape');
-
 test('LoL Versions', function(t) {
   LoLAPI.request.getLoLVersions({
     realm: 'euw',
