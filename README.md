@@ -64,6 +64,7 @@ Things to bear in mind:
 
 ## Design Decisions ##
 - The endpoint handlers are split up into two sections - route stems and handlers. The route stems provide the, um, 'stem' for the endpoint like '/summoner' and then the handlers are 'actions' which you can perform on each endpoint. The result is requests that are human readable like 'LoLAPI.request.getSummonerIdFromSummonerName()' or 'LoLAPI.getLoLVersions()'. I guess we could have had a system where the requests were formatted like the RiotAPI - 'LoLAPI.request.summoner.byName' or something like that, but I don't much like having to go back to the RiotAPI every five minutes just to find out how exactly each one of those endpoints is ordered. Also, each one of those endpoints ends up being quite distinct in its parameters such that thinking the endpoints consistent is quite a folly. e.g. /summoner/{summonerIds} and /summoner/by-name/{summonerNames} take different format inputs and therefore require different input parsing.
+- “Surely this would have made better sense with a centralised messaging queue that distributes the api actions to different workers.” - Yes, intrepid developer, that is a perfectly valid way of going about things - It avoids the problem of two-way data-binding with a centralised cache and enforces one-directional data-flow, which I’m a big fan of. However, I started coding syner.gg in PHP and the central ‘hub’ where requests originate is still in PHP and I wanted a way for both my ‘workers’ and my ‘brain’ to handle Riot API requests for basic things (e.g. error checking; summoner id retrieval) and to not hit my rate limit with a single API key and avoid roundtrips from workers back to the brain - i.e. the brain should be ‘fire and forget’. Perhaps in the future I can send all Riot API requests to a central messaging queue, but at the moment it just doesn’t make sense.
 
 ## Changelog ##
 ### [1.0.11] - 2016-03-25 ###
@@ -106,14 +107,27 @@ Things to bear in mind:
  - Caching request results - This will allow us to save the results of API queries in a distributed cache and call upon them when needed.
  - Redis database switching.
  - Advanced error handling.
+ - custom GET parameter addition
 
 ## Known issues ##
 **Too many to list here**
 
 
 ## API Documentation ##
+
+### Custom Endpoints ###
+We do our best to keep the endpoint versions up-to-date but in case the endpoint versions fall behind Riot's release schedule you can pass in a custom endpoint as follows:
+
+    LoLAPI.request.getLoLVersions({
+      endpoint: 'https://global.api.pvp.net/api/lol/static-data/$r/v1.2/versions/'
+    });
+
+Things to note:
+  1. Ensure the platform and realm/region variable placeholders are put in as $p and $r respectively. If you do not do this it won't stop working, but it will make your code less extensible.
+  2. Ensure you add the trailing '/' at the end of the endpoint. This is to ensure that the api key and other GET parameters are added properly.
+
 ### Realm or Region ###
-We honestly have no clue what is better 'realm' or 'region', so we've added in support for both, they are interchangeable throughout the module.
+We honestly have no clue what is better, 'realm' or 'region', so we've added in support for both, they are interchangeable throughout the module.
 
 ### Filter Return Variables ###
 You can filter down your return variables like so:
@@ -138,9 +152,20 @@ You can filter down your return variables like so:
 This may help with reducing your memory footprint.
 
 ### Supported Actions ###
-These are the supported League of Legends API actions:
-- LoLAPI.request.getLoLVersions()
-- LoLAPI.request.getMatchList()
+These are the supported League of Legends API actions (All argument are supplied as examples only):
+- LoLAPI.request.getLoLVersions({
+    realm: 'na',
+  });
+- LoLAPI.request.getMatchList({
+    realm: 'euw',
+    summonerId: '21505497',
+    seasons: 'SEASON_2016', //Can be 'season' or 'seasons' and can accept string or array
+    queue: 'RANKED_SOLO_5x5', //Can be 'queue' or 'queues' and can accept string or array
+    beginIndex: 0,
+    endIndex: 1,
+    beginTime: 12031023,
+    endTime: 19231923019
+  });
 - LoLAPI.request.getMatch()
 - LoLAPI.request.getSummonerIdFromSummonerName()
 - LoLAPI.request.getTeam()

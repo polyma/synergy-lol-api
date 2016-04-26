@@ -49,13 +49,13 @@ var LoLAPI = {
       }.bind(this));
     }
     this.cache.on('connect', function() {
-      this.logger.log('LoL API Connected to Redis');
+      this.logger.info('LoL API Connected to Redis');
       this.getOneHourCount().then(count => {
-        this.logger.log(inputObj.limit_one_hour - count + ' API requests available in the hour.');
+        this.logger.info(inputObj.limit_one_hour - count + ' API requests available in the hour.');
         return this.timeToHourExpiry();
       })
       .then(ttl => {
-        this.logger.log(ttl + ' seconds left until hour cache expiry');
+        this.logger.info(ttl + ' seconds left until hour cache expiry');
       });
     }.bind(this));
     /*
@@ -108,7 +108,7 @@ var LoLAPI = {
           }
         }).bind(this);
     }.bind(this), 10);
-    this.logger.log('Created LoL API Request Handler');
+    this.logger.info('Created LoL API Request Handler');
     return;
   },
   setApiKey: function(key) {
@@ -184,7 +184,7 @@ var LoLAPI = {
     //Always clear the 10s timeout just to be certain.
     //Clear interval and reset after retry after is cleared
     clearInterval(this.tenSecondsTimeout);
-    this.logger.log(this.tenSecondsTimeout);
+    this.logger.info(this.tenSecondsTimeout);
   },
   checkRateLimit: function() {
     return this.getOneHourCount() //Get this first because we care about it less
@@ -198,7 +198,7 @@ var LoLAPI = {
           else if((parseInt(oneHour) + this.requestCount.outstandingRequests) >= this.rateLimit.oneHour) {
             return this.timeToHourExpiry()
             .then(ttl => {
-              this.logger.log('Hit hour limit: ' + oneHour + '. ' + ttl + ' seconds to go until cache reset.');
+              this.logger.info('Hit hour limit: ' + oneHour + '. ' + ttl + ' seconds to go until cache reset.');
               return 0; // 0 Spaces
             })
           }
@@ -241,9 +241,9 @@ var LoLAPI = {
                 json: true,
                 resolveWithFullResponse: true
               }
-              this.logger.log('Using ' + options.uri);
-              this.logger.log(this.requestCount.outstandingRequests);
-              this.logger.log(tenSeconds + ' ' + oneHour);
+              this.logger.info('Using ' + options.uri);
+              this.logger.info(this.requestCount.outstandingRequests);
+              this.logger.info(tenSeconds + ' ' + oneHour);
               return rp(options)
               .then(
                 function(response) {
@@ -277,7 +277,7 @@ var LoLAPI = {
                     }
                   }
                   else {
-                    this.logger.log('SUCCESSFUL RESPONSE FROM: ' + endpoint);
+                    this.logger.info('SUCCESSFUL RESPONSE FROM: ' + endpoint);
                     return response.body; //Resolve promise
                   }
                 }.bind(this),
@@ -285,15 +285,15 @@ var LoLAPI = {
                 function(reason) {
                   this.requestCount.outstandingRequests -= 1;
                   if(reason.statusCode === 429) {
-                    this.logger.log('Rate limit reached!')
+                    this.logger.info('Rate limit reached!')
                     //NOTE: Riot have been known to remove the header so including this to avoid breaking.
                     if(typeof reason.response['headers']['retry-after'] !== 'undefined') {
-                      this.logger.log('Retrying after ' + reason.response['headers']['retry-after'] + 's');
+                      this.logger.info('Retrying after ' + reason.response['headers']['retry-after'] + 's');
                       // this.retryRateLimitOverride(reason.response['headers']['retry-after']);
                     }
                     else {
-                      this.logger.log('No Retry-After header');
-                      this.logger.log(reason.response['headers']);
+                      this.logger.info('No Retry-After header');
+                      this.logger.info(reason.response['headers']);
                     }
                   }
                   if(reason.error.code == 'ENOTFOUND') {
@@ -333,14 +333,14 @@ var LoLAPI = {
     }
     else {
       //Turns function to deferred promise and adds to queue.
-      this.logger.log('Adding ' + endpoint + ' to queue.');
+      this.logger.info('Adding ' + endpoint + ' to queue.');
       var resolve, reject;
       var promise = new Promise(function(reso, reje) {
         resolve = reso;
         reject = reje;
       })
       .then(function(times_failed) {
-        this.logger.log('Executing queue item!');
+        this.logger.info('Executing queue item!');
         return fn(); //NOTE: fn is prebound with arguments
       }.bind(this));
       this.queue.push({
@@ -362,7 +362,7 @@ var LoLAPI = {
       this.logger.errorHandle('Attempted to execute queue but cache disconnected');
     }
     if(bUnloaded) {
-      this.logger.log(this.queue.length + ' in queue after unloading.');
+      this.logger.info(this.queue.length + ' in queue after unloading.');
     }
     return;
   },
@@ -382,7 +382,7 @@ var LoLAPI = {
   },
   shutdown: function(now) {
     return new Promise((resolve, reject) => {
-      this.logger.log('LoL API shutting down...');
+      this.logger.info('LoL API shutting down...');
       clearInterval(this.queueInterval);
       if(now) {
         this.cache.end(true);
@@ -391,7 +391,7 @@ var LoLAPI = {
         this.cache.quit();
       }
       this.cache.on('end', function() {
-        this.logger.log('Redis connected severed.');
+        this.logger.info('Redis connected severed.');
         resolve(true);
       }.bind(this));
     }).bind(this)
